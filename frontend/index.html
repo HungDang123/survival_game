@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SurvivalCraft 3D</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>" />
+  </head>
+  <body>
+    <div id="lobby">
+      <canvas id="lobby-canvas"></canvas>
+
+      <div class="lobby-layout">
+        <div class="lobby-brand">
+          <div class="logo-ring"></div>
+          <div class="logo-inner">🌍</div>
+          <h1 class="game-title">SurvivalCraft</h1>
+          <p class="game-subtitle">3D · MULTIPLAYER · SANDBOX</p>
+          <div class="feature-pills">
+            <span class="pill">⛏️ Đào &amp; Xây</span>
+            <span class="pill">🌐 WebRTC P2P</span>
+            <span class="pill">🎙️ Voice Chat</span>
+            <span class="pill">💾 Auto Save</span>
+          </div>
+        </div>
+
+        <div class="lobby-card">
+          <div class="card-header">
+            <span class="card-badge">ONLINE</span>
+            <h2>Tham gia phòng</h2>
+          </div>
+
+          <div class="form-group">
+            <label for="room-input">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+              Tên phòng
+            </label>
+            <div class="input-wrapper">
+              <input type="text" id="room-input" placeholder="Nhập tên phòng..." maxlength="32" autocomplete="off" />
+              <span class="input-suffix">#ROOM</span>
+            </div>
+          </div>
+
+          <button id="join-btn" class="btn-primary">
+            <span class="btn-icon">⚔️</span>
+            <span>VÀO GAME</span>
+            <span class="btn-arrow">→</span>
+          </button>
+
+          <div class="divider"><span>ĐIỀU KHIỂN</span></div>
+
+          <div class="controls-grid">
+            <div class="ctrl-item"><kbd>WASD</kbd><span>Di chuyển</span></div>
+            <div class="ctrl-item"><kbd>Space</kbd><span>Nhảy</span></div>
+            <div class="ctrl-item"><kbd>1-8</kbd><span>Chọn tool</span></div>
+            <div class="ctrl-item"><kbd>Scroll</kbd><span>Đổi tool</span></div>
+            <div class="ctrl-item"><kbd>Click</kbd><span>Dùng tool</span></div>
+            <div class="ctrl-item"><kbd>T</kbd><span>Chat</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="game">
+      <div id="canvas-container"></div>
+      <div id="hud"></div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+
+    <script>
+      const canvas = document.getElementById('lobby-canvas');
+      const ctx = canvas.getContext('2d');
+      let particles = [];
+
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      for (let i = 0; i < 120; i++) {
+        particles.push({
+          x: Math.random() * window.innerWidth,
+          y: Math.random() * window.innerHeight,
+          r: Math.random() * 1.5 + 0.2,
+          vx: (Math.random() - 0.5) * 0.3,
+          vy: (Math.random() - 0.5) * 0.3,
+          alpha: Math.random() * 0.6 + 0.1
+        });
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(p => {
+          p.x += p.vx; p.y += p.vy;
+          if (p.x < 0) p.x = canvas.width;
+          if (p.x > canvas.width) p.x = 0;
+          if (p.y < 0) p.y = canvas.height;
+          if (p.y > canvas.height) p.y = 0;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(100,180,255,${p.alpha})`;
+          ctx.fill();
+        });
+        requestAnimationFrame(draw);
+      }
+      draw();
+    </script>
+  </body>
+</html>
