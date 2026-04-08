@@ -48,11 +48,18 @@ export class MobManager {
   }
 
   private spawnNear(playerPos: THREE.Vector3, getTerrainHeight: (x: number, z: number) => number) {
-    const angle = Math.random() * Math.PI * 2;
-    const r = SPAWN_RADIUS_MIN + Math.random() * (SPAWN_RADIUS_MAX - SPAWN_RADIUS_MIN);
-    const x = playerPos.x + Math.cos(angle) * r;
-    const z = playerPos.z + Math.sin(angle) * r;
-    const y = getTerrainHeight(x, z);
+    const WATER_LEVEL = -1.0;
+    let x = 0, z = 0, y = 0;
+    let tries = 0;
+    do {
+      const angle = Math.random() * Math.PI * 2;
+      const r = SPAWN_RADIUS_MIN + Math.random() * (SPAWN_RADIUS_MAX - SPAWN_RADIUS_MIN);
+      x = playerPos.x + Math.cos(angle) * r;
+      z = playerPos.z + Math.sin(angle) * r;
+      y = getTerrainHeight(x, z);
+      tries++;
+    } while (y < WATER_LEVEL + 0.5 && tries < 8);
+    if (y < WATER_LEVEL + 0.5) return;
 
     let type: MobType;
     if (this.stats.level >= 5 && Math.random() < 0.08) type = 'golem';

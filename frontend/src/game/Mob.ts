@@ -18,10 +18,10 @@ export interface MobDef {
 }
 
 export const MOB_DEFS: Record<MobType, MobDef> = {
-  zombie:   { type: 'zombie',   maxHp: 60,  damage: 8,  speed: 3.5, xp: 25,  detectRange: 22, attackRange: 2.0, attackInterval: 1.8, loot: ['health_potion','cloth'],      color: 0x3a7a35, scale: 1.0 },
-  skeleton: { type: 'skeleton', maxHp: 40,  damage: 12, speed: 5.0, xp: 30,  detectRange: 28, attackRange: 1.8, attackInterval: 1.4, loot: ['arrow','bone'],               color: 0xd4cdb5, scale: 0.9 },
-  spider:   { type: 'spider',   maxHp: 30,  damage: 15, speed: 7.0, xp: 35,  detectRange: 25, attackRange: 1.6, attackInterval: 1.2, loot: ['venom','string'],             color: 0x6b1a1a, scale: 0.7 },
-  golem:    { type: 'golem',    maxHp: 200, damage: 22, speed: 2.0, xp: 100, detectRange: 18, attackRange: 2.5, attackInterval: 2.5, loot: ['gem','stone_shard','ore'],    color: 0x707070, scale: 1.8 },
+  zombie:   { type: 'zombie',   maxHp: 60,  damage: 8,  speed: 3.5, xp: 25,  detectRange: 22, attackRange: 2.2, attackInterval: 1.8, loot: ['health_potion','cloth'],   color: 0x3a7a35, scale: 1.4 },
+  skeleton: { type: 'skeleton', maxHp: 40,  damage: 12, speed: 5.0, xp: 30,  detectRange: 28, attackRange: 2.0, attackInterval: 1.4, loot: ['arrow','bone'],            color: 0xd4cdb5, scale: 1.2 },
+  spider:   { type: 'spider',   maxHp: 30,  damage: 15, speed: 7.0, xp: 35,  detectRange: 25, attackRange: 1.8, attackInterval: 1.2, loot: ['venom','string'],          color: 0x6b1a1a, scale: 1.1 },
+  golem:    { type: 'golem',    maxHp: 200, damage: 22, speed: 2.0, xp: 100, detectRange: 18, attackRange: 2.8, attackInterval: 2.5, loot: ['gem','stone_shard','ore'], color: 0x707070, scale: 2.0 },
 };
 
 export class Mob {
@@ -65,31 +65,29 @@ export class Mob {
     const c = this.def.color;
 
     if (type === 'spider') {
-      const body = box(1.2, 0.55, 0.8, c, 0.35 * s);
-      const head = box(0.55, 0.45, 0.45, c, 0.78 * s);
-      head.position.z = 0.42 * s;
+      const body = box(1.2, 0.55, 0.8, c, 0.35);
+      const head = box(0.55, 0.45, 0.45, c, 0.78);
+      head.position.z = 0.42;
       for (let i = 0; i < 4; i++) {
-        const leg = box(0.08, 0.5, 0.08, 0x3a0e0e, 0.25 * s);
-        leg.position.set((i < 2 ? 0.7 : -0.7) * s, 0, ((i % 2) - 0.5) * 0.4 * s);
-        leg.rotation.z = (i < 2 ? 0.6 : -0.6);
+        const leg = box(0.08, 0.5, 0.08, 0x3a0e0e, 0.25);
+        leg.position.set(i < 2 ? 0.7 : -0.7, 0, ((i % 2) - 0.5) * 0.4);
+        leg.rotation.z = i < 2 ? 0.6 : -0.6;
         g.add(leg);
       }
-      const eyeL = box(0.1, 0.1, 0.04, 0xff2020, 0.86 * s);
-      eyeL.position.set(0.14 * s, 0.78 * s, 0.63 * s);
-      const eyeR = eyeL.clone(); eyeR.position.set(-0.14 * s, 0.78 * s, 0.63 * s);
+      const eyeL = box(0.1, 0.1, 0.04, 0xff2020, 0.86);
+      eyeL.position.set(0.14, 0.78, 0.63);
+      const eyeR = eyeL.clone(); eyeR.position.set(-0.14, 0.78, 0.63);
       g.add(body, head, eyeL, eyeR);
     } else if (type === 'golem') {
-      const body = box(1.2 * s, 1.4 * s, 0.7 * s, c, 1.0 * s);
-      const head = box(0.9 * s, 0.85 * s, 0.8 * s, c, 2.05 * s);
-      const armL = box(0.38 * s, 1.1 * s, 0.38 * s, 0x5a5a5a, 1.0 * s);
-      armL.position.x = 0.9 * s;
-      const armR = armL.clone(); armR.position.x = -0.9 * s;
-      const legL = box(0.42 * s, 0.9 * s, 0.42 * s, 0x5a5a5a, 0.35 * s);
-      legL.position.x = 0.32 * s;
-      const legR = legL.clone(); legR.position.x = -0.32 * s;
-      const eyeL = box(0.2 * s, 0.16 * s, 0.04 * s, 0xff6600, 2.12 * s);
-      eyeL.position.x = 0.22 * s; eyeL.position.z = 0.42 * s;
-      const eyeR = eyeL.clone(); eyeR.position.x = -0.22 * s;
+      const body = box(1.2, 1.4, 0.7, c, 1.0);
+      const head = box(0.9, 0.85, 0.8, c, 2.05);
+      const armL = box(0.38, 1.1, 0.38, 0x5a5a5a, 1.0); armL.position.x = 0.9;
+      const armR = armL.clone(); armR.position.x = -0.9;
+      const legL = box(0.42, 0.9, 0.42, 0x5a5a5a, 0.35); legL.position.x = 0.32;
+      const legR = legL.clone(); legR.position.x = -0.32;
+      const eyeL = box(0.2, 0.16, 0.04, 0xff6600, 2.12);
+      eyeL.position.x = 0.22; eyeL.position.z = 0.42;
+      const eyeR = eyeL.clone(); eyeR.position.x = -0.22;
       g.add(body, head, armL, armR, legL, legR, eyeL, eyeR);
     } else if (type === 'skeleton') {
       const body = box(0.44, 0.65, 0.18, c, 0.9);
@@ -168,12 +166,17 @@ export class Mob {
     getTerrainHeight: (x: number, z: number) => number,
     camera: THREE.Camera
   ) {
+    const WATER_LEVEL = -1.0;
+
     if (this.state === 'dead') {
       this.deathTimer += delta;
       return;
     }
 
-    const dist = this.mesh.position.distanceTo(playerPos);
+    const hdist = Math.sqrt(
+      (this.mesh.position.x - playerPos.x) ** 2 +
+      (this.mesh.position.z - playerPos.z) ** 2
+    );
 
     switch (this.state) {
       case 'idle':
@@ -189,7 +192,7 @@ export class Mob {
           );
           this.roamTimer = 0;
         }
-        if (dist < this.def.detectRange) this.state = 'chase';
+        if (hdist < this.def.detectRange) this.state = 'chase';
         break;
 
       case 'roam':
@@ -197,34 +200,34 @@ export class Mob {
         if (this.roamTimer > 4 || this.moveToward(this.roamTarget, this.def.speed * 0.5, delta) < 0.5) {
           this.state = 'idle';
         }
-        if (dist < this.def.detectRange) this.state = 'chase';
+        if (hdist < this.def.detectRange) this.state = 'chase';
         break;
 
       case 'chase':
-        if (dist > this.def.detectRange * 1.5) { this.state = 'idle'; break; }
-        if (dist < this.def.attackRange) { this.state = 'attack'; break; }
+        if (hdist > this.def.detectRange * 1.5) { this.state = 'idle'; break; }
+        if (hdist < this.def.attackRange)        { this.state = 'attack'; break; }
         this.moveToward(playerPos, this.def.speed, delta);
         break;
 
       case 'attack':
-        if (dist > this.def.attackRange * 1.3) { this.state = 'chase'; break; }
+        if (hdist > this.def.attackRange * 1.4) { this.state = 'chase'; break; }
         this.attackTimer += delta;
         if (this.attackTimer >= this.def.attackInterval) {
           this.attackTimer = 0;
           if (this.onAttackPlayer) this.onAttackPlayer(this.def.damage);
-          this.mesh.position.lerp(playerPos, 0.08);
         }
+        this.moveToward(playerPos, this.def.speed * 0.3, delta);
         break;
     }
 
     const groundY = getTerrainHeight(this.mesh.position.x, this.mesh.position.z);
-    this.mesh.position.y = groundY;
+    this.mesh.position.y = Math.max(groundY, WATER_LEVEL + 0.05);
 
     const screenPos = new THREE.Vector3(
       this.mesh.position.x, this.mesh.position.y + this.def.scale * 2.2, this.mesh.position.z
     ).project(camera);
 
-    if (screenPos.z < 1 && dist < 40) {
+    if (screenPos.z < 1 && hdist < 40) {
       const x = (screenPos.x * 0.5 + 0.5) * window.innerWidth;
       const y = (1 - (screenPos.y * 0.5 + 0.5)) * window.innerHeight;
       this.hpBar.style.display = 'block';

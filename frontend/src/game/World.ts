@@ -135,7 +135,7 @@ export class World {
   }
 
   update(playerX: number, playerZ: number, delta: number) {
-    this.time += delta * 0.008;
+    this.time += delta * 0.0015;
     const sunAngle = this.time * Math.PI * 2;
     const sinA = Math.sin(sunAngle);
     const cosA = Math.cos(sunAngle);

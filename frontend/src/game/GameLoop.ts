@@ -230,7 +230,8 @@ export class GameLoop {
     this.deformer = new TerrainDeformer(this.world.getChunks());
     this.deformer.setCallback(this.deformCallback);
 
-    this.localPlayer.update(delta * this.stats.speed, terrain);
+    this.localPlayer.speedMultiplier = this.stats.speed;
+    this.localPlayer.update(delta, terrain);
     this.stats.update(delta);
 
     this.mobs.update(delta, playerPos, terrain, this.localPlayer.camera);
