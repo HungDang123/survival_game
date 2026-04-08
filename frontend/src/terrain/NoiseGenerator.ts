@@ -1,15 +1,17 @@
 import { createNoise2D } from 'simplex-noise';
 
 export class NoiseGenerator {
-  private noise2D: ReturnType<typeof createNoise2D>;
-  private noise2D2: ReturnType<typeof createNoise2D>;
-  private noise2D3: ReturnType<typeof createNoise2D>;
+  private n1: ReturnType<typeof createNoise2D>;
+  private n2: ReturnType<typeof createNoise2D>;
+  private n3: ReturnType<typeof createNoise2D>;
+  private n4: ReturnType<typeof createNoise2D>;
 
   constructor(seed: number = Math.random()) {
-    const seededRandom = this.mulberry32(seed);
-    this.noise2D = createNoise2D(seededRandom);
-    this.noise2D2 = createNoise2D(seededRandom);
-    this.noise2D3 = createNoise2D(seededRandom);
+    const rng = this.mulberry32(Math.floor(seed));
+    this.n1 = createNoise2D(rng);
+    this.n2 = createNoise2D(rng);
+    this.n3 = createNoise2D(rng);
+    this.n4 = createNoise2D(rng);
   }
 
   private mulberry32(seed: number): () => number {
@@ -22,15 +24,34 @@ export class NoiseGenerator {
     };
   }
 
+  private smoothstep(t: number): number {
+    return t * t * (3 - 2 * t);
+  }
+
   getHeight(x: number, z: number): number {
-    const scale1 = 0.008;
-    const scale2 = 0.025;
-    const scale3 = 0.1;
+    const STEP = 2;
 
-    const h1 = this.noise2D(x * scale1, z * scale1) * 30;
-    const h2 = this.noise2D2(x * scale2, z * scale2) * 10;
-    const h3 = this.noise2D3(x * scale3, z * scale3) * 3;
+    const continent = (this.n1(x * 0.0035, z * 0.0035) + 1) / 2;
 
-    return h1 + h2 + h3;
+    const hills = (this.n2(x * 0.018, z * 0.018) + 1) / 2;
+
+    const ridge = Math.abs(this.n3(x * 0.012, z * 0.012));
+
+    const detail = this.n4(x * 0.07, z * 0.07) * 1.2;
+
+    const landT = this.smoothstep(Math.max(0, Math.min(1, continent)));
+
+    const flatBase = landT * 5;
+
+    const hillFactor = landT * landT;
+    const hillH = hills * hills * 14 * hillFactor;
+
+    const ridgeH = ridge * ridge * 8 * hillFactor;
+
+    let h = -3 + flatBase + hillH * 0.6 + ridgeH * 0.4 + detail;
+
+    h = Math.floor(h / STEP) * STEP;
+
+    return h;
   }
 }

@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { TerrainChunk, CHUNK_SIZE } from '../terrain/TerrainChunk';
 import { NoiseGenerator } from '../terrain/NoiseGenerator';
 
-const RENDER_DISTANCE = 3;
-const WATER_LEVEL = -1.5;
+const RENDER_DISTANCE = 4;
+const WATER_LEVEL = -1.0;
 
 export class World {
   scene: THREE.Scene;
@@ -171,7 +171,7 @@ export class World {
       new THREE.Color(0xa8cce8),
       dayT
     );
-    this.scene.fog = new THREE.FogExp2(fogColor, 0.006);
+    this.scene.fog = new THREE.FogExp2(fogColor, 0.004);
 
     this.hemi.color.set(topColor);
     this.hemi.groundColor.lerpColors(

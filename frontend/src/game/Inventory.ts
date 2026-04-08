@@ -1,4 +1,4 @@
-export type ToolType = 'dig' | 'build' | 'hand';
+export type ToolType = 'dig' | 'build' | 'hand' | 'sword';
 
 export interface InventoryItem {
   id: string;
@@ -15,9 +15,10 @@ export class Inventory {
 
   constructor() {
     this.slots = new Array(this.MAX_SLOTS).fill(null);
-    this.slots[0] = { id: 'shovel', name: 'Xẻng', icon: '⛏️', tool: 'dig' };
-    this.slots[1] = { id: 'hammer', name: 'Búa', icon: '🔨', tool: 'build' };
-    this.slots[2] = { id: 'hand', name: 'Tay', icon: '✋', tool: 'hand' };
+    this.slots[0] = { id: 'sword',  name: 'Kiếm',  icon: '⚔️', tool: 'sword' };
+    this.slots[1] = { id: 'shovel', name: 'Xẻng',  icon: '⛏️', tool: 'dig'   };
+    this.slots[2] = { id: 'hammer', name: 'Búa',   icon: '🔨', tool: 'build' };
+    this.slots[3] = { id: 'hand',   name: 'Tay',   icon: '✋', tool: 'hand'  };
 
     document.addEventListener('keydown', (e) => {
       const num = parseInt(e.key);
