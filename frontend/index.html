@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SurvivalCraft 3D</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>" />
+  </head>
+  <body>
+    <div id="lobby">
+      <canvas id="lobby-canvas"></canvas>
+
+      <div class="lobby-layout">
+        <!-- Brand side -->
+        <div class="lobby-brand">
+          <div class="logo-ring"></div>
+          <div class="logo-ring logo-ring-2"></div>
+          <div class="logo-inner">🌍</div>
+          <h1 class="game-title">SurvivalCraft</h1>
+          <p class="game-subtitle">3D · MULTIPLAYER · SANDBOX</p>
+          <div class="feature-pills">
+            <span class="pill">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+              Đào &amp; Xây
+            </span>
+            <span class="pill">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              WebRTC P2P
+            </span>
+            <span class="pill">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+              Voice Chat
+            </span>
+            <span class="pill">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg>
+              Auto Save
+            </span>
+          </div>
+        </div>
+
+        <!-- Card -->
+        <div class="lobby-card">
+          <div class="card-header">
+            <span class="card-badge">ONLINE</span>
+            <h2>Tham gia phòng</h2>
+          </div>
+
+          <div class="form-group">
+            <label for="room-input">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+              Tên phòng
+            </label>
+            <div class="input-wrapper">
+              <input type="text" id="room-input" placeholder="Nhập tên phòng..." maxlength="32" autocomplete="off" />
+              <span class="input-suffix">#ROOM</span>
+            </div>
+          </div>
+
+          <button id="join-btn" class="btn-primary">
+            <span class="btn-icon">⚔️</span>
+            <span>VÀO GAME</span>
+            <span class="btn-arrow">→</span>
+          </button>
+
+          <div class="divider"><span>ĐIỀU KHIỂN</span></div>
+
+          <div class="controls-grid">
+            <div class="ctrl-item"><kbd>WASD</kbd><span>Di chuyển</span></div>
+            <div class="ctrl-item"><kbd>Space</kbd><span>Nhảy</span></div>
+            <div class="ctrl-item"><kbd>1–8</kbd><span>Chọn tool</span></div>
+            <div class="ctrl-item"><kbd>Scroll</kbd><span>Đổi tool</span></div>
+            <div class="ctrl-item"><kbd>Click</kbd><span>Dùng tool</span></div>
+            <div class="ctrl-item"><kbd>T</kbd><span>Chat</span></div>
+            <div class="ctrl-item"><kbd>Q/E/R</kbd><span>Kỹ năng</span></div>
+            <div class="ctrl-item"><kbd>Esc</kbd><span>Menu</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="game">
+      <div id="canvas-container"></div>
+      <div id="hud"></div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+
+    <script>
+      const canvas = document.getElementById('lobby-canvas');
+      const ctx = canvas.getContext('2d');
+
+      function resize() {
+        canvas.width  = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      // Build particle array — 10% are "rare" golden ones
+      const particles = [];
+      for (let i = 0; i < 190; i++) {
+        const rare = Math.random() < 0.10;
+        particles.push({
+          x:     Math.random() * window.innerWidth,
+          y:     Math.random() * window.innerHeight,
+          r:     rare ? 2.2 + Math.random() * 1.8 : 0.5 + Math.random() * 1.5,
+          vx:    (Math.random() - 0.5) * (rare ? 0.15 : 0.30),
+          vy:    (Math.random() - 0.5) * (rare ? 0.15 : 0.30),
+          alpha: rare ? 0.55 + Math.random() * 0.3 : 0.12 + Math.random() * 0.5,
+          rare,
+          pulse: Math.random() * Math.PI * 2,
+        });
+      }
+
+      function draw(ts) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const t = ts * 0.001;
+
+        // Draw constellation connections
+        for (let i = 0; i < particles.length; i++) {
+          const a = particles[i];
+          for (let j = i + 1; j < particles.length; j++) {
+            const b = particles[j];
+            const dx = a.x - b.x;
+            const dy = a.y - b.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 115) {
+              const opacity = (1 - dist / 115) * 0.18;
+              ctx.beginPath();
+              ctx.moveTo(a.x, a.y);
+              ctx.lineTo(b.x, b.y);
+              ctx.strokeStyle = `rgba(80,160,255,${opacity})`;
+              ctx.lineWidth = 0.6;
+              ctx.stroke();
+            }
+          }
+        }
+
+        // Draw particles
+        for (const p of particles) {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.pulse += 0.03;
+          if (p.x < 0) p.x = canvas.width;
+          if (p.x > canvas.width) p.x = 0;
+          if (p.y < 0) p.y = canvas.height;
+          if (p.y > canvas.height) p.y = 0;
+
+          const a = p.alpha * (0.75 + 0.25 * Math.sin(p.pulse));
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          if (p.rare) {
+            // Golden rare particles with glow
+            const grd = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 3);
+            grd.addColorStop(0,   `rgba(255,210,80,${a})`);
+            grd.addColorStop(0.5, `rgba(255,170,40,${a * 0.5})`);
+            grd.addColorStop(1,   `rgba(255,140,0,0)`);
+            ctx.fillStyle = grd;
+            ctx.arc(p.x, p.y, p.r * 3, 0, Math.PI * 2);
+          } else {
+            ctx.fillStyle = `rgba(90,175,255,${a})`;
+          }
+          ctx.fill();
+        }
+
+        requestAnimationFrame(draw);
+      }
+      requestAnimationFrame(draw);
+    </script>
+  </body>
+</html>

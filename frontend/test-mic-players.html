@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>SurvivalCraft - Multi Player + Mic Tester</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #050810;
+    color: #fff;
+    font-family: 'Courier New', monospace;
+    padding: 20px;
+  }
+  h1 { color: #4af; margin-bottom: 20px; font-size: 18px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .panel {
+    background: rgba(10,15,30,0.9);
+    border: 1px solid rgba(68,170,255,0.2);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .panel h2 { color: #fa4; font-size: 13px; margin-bottom: 12px; letter-spacing: 1px; }
+  .config { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .config label { font-size: 11px; color: rgba(255,255,255,0.5); }
+  .config input {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: white;
+    padding: 6px 10px;
+    font-size: 12px;
+    width: 100%;
+  }
+  .btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    transition: all 0.15s;
+  }
+  .btn-blue  { background: #1a6aff; color: white; }
+  .btn-green { background: #1a8a3a; color: white; }
+  .btn-red   { background: #8a1a1a; color: white; }
+  .btn-yellow{ background: #7a6a00; color: white; }
+  .btn:hover { filter: brightness(1.2); transform: translateY(-1px); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .log {
+    background: #000;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px;
+    height: 200px;
+    overflow-y: auto;
+    padding: 8px;
+    font-size: 11px;
+    line-height: 1.6;
+  }
+  .log-line { margin-bottom: 2px; }
+  .log-line.info  { color: #4af; }
+  .log-line.success { color: #4d4; }
+  .log-line.warn  { color: #fa4; }
+  .log-line.error { color: #f44; }
+  .log-line.mic   { color: #d4f; }
+  .player-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .player-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    font-size: 11px;
+    transition: all 0.2s;
+  }
+  .player-card.connected { border-color: rgba(68,204,68,0.5); }
+  .player-card.speaking  {
+    border-color: rgba(200,100,255,0.8) !important;
+    box-shadow: 0 0 10px rgba(200,100,255,0.3);
+    animation: micPulse 0.5s ease-in-out infinite;
+  }
+  @keyframes micPulse {
+    0%,100% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+  }
+  .player-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1a6aff, #8800ff);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; margin: 0 auto 6px;
+  }
+  .player-id   { color: rgba(255,255,255,0.7); font-size: 10px; }
+  .player-status { font-size: 9px; margin-top: 4px; }
+  .status-dot {
+    display: inline-block; width: 6px; height: 6px;
+    border-radius: 50%; margin-right: 4px;
+  }
+  .dot-green { background: #4d4; }
+  .dot-red   { background: #f44; }
+  .dot-yellow{ background: #fa4; }
+
+  .mic-panel {
+    border-color: rgba(200,100,255,0.3);
+  }
+  .mic-panel h2 { color: #d4f; }
+  .volume-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 50px;
+    margin: 12px 0;
+  }
+  .v-bar {
+    flex: 1;
+    background: rgba(100,200,255,0.2);
+    border-radius: 2px;
+    transition: height 0.05s, background 0.05s;
+    min-height: 2px;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .stat-box {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 6px;
+    padding: 8px;
+    text-align: center;
+  }
+  .stat-num  { font-size: 20px; font-weight: bold; color: #4af; }
+  .stat-label{ font-size: 9px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<h1>🎮 SurvivalCraft 3D — Multi Player + Mic Tester</h1>
+
+<div class="grid">
+
+  <!-- LEFT: Player Control -->
+  <div>
+    <div class="panel">
+      <h2>⚙️ CONFIG</h2>
+      <div class="config">
+        <label>Server URL (WebSocket)</label>
+        <input id="serverUrl" value="ws://localhost:8080">
+        <label>Room ID</label>
+        <input id="roomId" value="test-room">
+        <label>Số lượng Bot Players</label>
+        <input id="numPlayers" type="number" value="4" min="1" max="20">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-green" onclick="connectAllPlayers()">▶ Connect All</button>
+        <button class="btn btn-red"   onclick="disconnectAll()">■ Disconnect All</button>
+        <button class="btn btn-yellow" onclick="simulateActivity()">🔄 Simulate</button>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:12px">
+      <h2>👥 PLAYERS</h2>
+      <div class="player-grid" id="playerGrid">
+        <div style="color:rgba(255,255,255,0.3);font-size:11px">Chưa có players...</div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-num" id="statConnected">0</div>
+          <div class="stat-label">CONNECTED</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num" id="statMessages">0</div>
+          <div class="stat-label">MESSAGES</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num" id="statErrors">0</div>
+          <div class="stat-label">ERRORS</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Logs + Mic -->
+  <div>
+    <!-- Mic Panel -->
+    <div class="panel mic-panel">
+      <h2>🎙️ MIC / AUDIO TEST</h2>
+      <div class="btn-row">
+        <button class="btn btn-blue" id="btnMic" onclick="initMic()">🎙️ Bật Microphone</button>
+        <button class="btn btn-yellow" id="btnMute" onclick="toggleMute()" disabled>🔇 Mute</button>
+        <button class="btn btn-red" id="btnStopMic" onclick="stopMic()" disabled>⏹ Stop</button>
+      </div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:8px" id="micStatus">
+        Chưa bật microphone
+      </div>
+      <div class="volume-bars" id="volumeBars">
+        <!-- 20 bars -->
+      </div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:8px">
+        ℹ️ Mic thật cần browser permission. Bật mic rồi test voice chat với các bot player.
+      </div>
+      <div style="font-size:11px;color:rgba(200,100,255,0.7)" id="micLevel">
+        Volume: 0%
+      </div>
+    </div>
+
+    <!-- Log Panel -->
+    <div class="panel" style="margin-top:12px">
+      <h2>📋 LOGS</h2>
+      <div class="btn-row">
+        <button class="btn btn-yellow" onclick="clearLog()">🗑 Clear</button>
+        <button class="btn btn-blue" onclick="testRestAPI()">🌐 Test REST API</button>
+      </div>
+      <div class="log" id="logBox"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── State ─────────────────────────────────────────────────
+const players = new Map();
+let globalTick = 0;
+let simInterval = null;
+let micStream = null;
+let audioCtx = null;
+let analyser = null;
+let isMuted = false;
+let stats = { connected: 0, messages: 0, errors: 0 };
+const EMOJIS = ['🧑', '👩', '🧔', '👧', '🧙', '🧝', '🤺', '🧟'];
+
+// ─── Logging ───────────────────────────────────────────────
+function log(msg, type = 'info') {
+  const box = document.getElementById('logBox');
+  const line = document.createElement('div');
+  line.className = `log-line ${type}`;
+  const time = new Date().toISOString().slice(11, 19);
+  line.textContent = `[${time}] ${msg}`;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+  // Max 200 lines
+  while (box.children.length > 200) box.removeChild(box.firstChild);
+}
+function clearLog() { document.getElementById('logBox').innerHTML = ''; }
+
+// ─── Stats ─────────────────────────────────────────────────
+function updateStats() {
+  document.getElementById('statConnected').textContent = stats.connected;
+  document.getElementById('statMessages').textContent  = stats.messages;
+  document.getElementById('statErrors').textContent    = stats.errors;
+}
+
+// ─── Player Card ───────────────────────────────────────────
+function createPlayerCard(id, index) {
+  const card = document.createElement('div');
+  card.className = 'player-card';
+  card.id = `card-${id}`;
+  card.innerHTML = `
+    <div class="player-avatar">${EMOJIS[index % EMOJIS.length]}</div>
+    <div class="player-id">${id.slice(0, 8)}</div>
+    <div class="player-status">
+      <span class="status-dot dot-yellow"></span>
+      <span id="status-${id}">Connecting...</span>
+    </div>
+    <div id="peer-count-${id}" style="font-size:9px;color:rgba(255,255,255,0.3);margin-top:3px">0 peers</div>
+  `;
+  return card;
+}
+
+function setPlayerStatus(id, status, dotClass, extra = '') {
+  const statusEl = document.getElementById(`status-${id}`);
+  const dotEl    = document.querySelector(`#card-${id} .status-dot`);
+  if (statusEl) statusEl.textContent = status;
+  if (dotEl)    dotEl.className = `status-dot ${dotClass}`;
+  if (extra) {
+    const extraEl = document.getElementById(`peer-count-${id}`);
+    if (extraEl) extraEl.textContent = extra;
+  }
+}
+
+function setPlayerSpeaking(id, speaking) {
+  const card = document.getElementById(`card-${id}`);
+  if (!card) return;
+  if (speaking) card.classList.add('speaking');
+  else card.classList.remove('speaking');
+}
+
+// ─── Connect Players ───────────────────────────────────────
+function connectAllPlayers() {
+  const serverUrl  = document.getElementById('serverUrl').value;
+  const roomId     = document.getElementById('roomId').value;
+  const numPlayers = parseInt(document.getElementById('numPlayers').value);
+
+  document.getElementById('playerGrid').innerHTML = '';
+  players.clear();
+  stats.connected = 0;
+  updateStats();
+
+  log(`Connecting ${numPlayers} players to room: ${roomId}`, 'info');
+
+  for (let i = 0; i < numPlayers; i++) {
+    setTimeout(() => connectPlayer(serverUrl, roomId, i), i * 400);
+  }
+}
+
+function connectPlayer(serverUrl, roomId, index) {
+  const id = 'bot_' + Math.random().toString(36).slice(2, 10);
+  const wsUrl = `${serverUrl}/ws?room=${roomId}&player=${id}`;
+
+  const grid = document.getElementById('playerGrid');
+  const card = createPlayerCard(id, index);
+  grid.appendChild(card);
+
+  const ws = new WebSocket(wsUrl);
+  const playerData = { id, index, ws, connected: false, peers: new Set(), seed: null };
+  players.set(id, playerData);
+
+  ws.onopen = () => {
+    playerData.connected = true;
+    stats.connected++;
+    updateStats();
+    document.getElementById(`card-${id}`).classList.add('connected');
+    setPlayerStatus(id, 'Connected', 'dot-green');
+    log(`✅ [P${index+1}:${id.slice(0,6)}] Connected!`, 'success');
+  };
+
+  ws.onmessage = (e) => {
+    stats.messages++;
+    updateStats();
+    try {
+      const msg = JSON.parse(e.data);
+      handleMessage(playerData, msg);
+    } catch(err) {
+      stats.errors++;
+      updateStats();
+      log(`❌ Parse error: ${err.message}`, 'error');
+    }
+  };
+
+  ws.onerror = (e) => {
+    stats.errors++;
+    updateStats();
+    setPlayerStatus(id, 'Error', 'dot-red');
+    log(`❌ [${id.slice(0,6)}] WS Error`, 'error');
+  };
+
+  ws.onclose = () => {
+    if (playerData.connected) stats.connected = Math.max(0, stats.connected - 1);
+    playerData.connected = false;
+    updateStats();
+    setPlayerStatus(id, 'Disconnected', 'dot-red');
+    log(`🔌 [${id.slice(0,6)}] Disconnected`, 'warn');
+  };
+}
+
+// ─── Handle Signaling ──────────────────────────────────────
+function handleMessage(player, msg) {
+  switch(msg.type) {
+    case 'room_state':
+      player.seed = msg.seed;
+      log(`📦 [${player.id.slice(0,6)}] Room state: ${msg.players.length} players, seed=${msg.seed}`, 'info');
+      break;
+
+    case 'peer_joined':
+      player.peers.add(msg.peerId);
+      document.getElementById(`peer-count-${player.id}`)
+        && (document.getElementById(`peer-count-${player.id}`).textContent = `${player.peers.size} peers`);
+      log(`👋 [${player.id.slice(0,6)}] Peer joined: ${msg.peerId.slice(0,6)}`, 'info');
+      // Simulate offer
+      sendOffer(player, msg.peerId);
+      break;
+
+    case 'peer_left':
+      player.peers.delete(msg.peerId);
+      document.getElementById(`peer-count-${player.id}`)
+        && (document.getElementById(`peer-count-${player.id}`).textContent = `${player.peers.size} peers`);
+      log(`👋 [${player.id.slice(0,6)}] Peer left: ${msg.peerId.slice(0,6)}`, 'warn');
+      break;
+
+    case 'offer':
+      log(`📨 [${player.id.slice(0,6)}] Offer from: ${msg.from.slice(0,6)}`, 'info');
+      sendAnswer(player, msg.from);
+      break;
+
+    case 'answer':
+      log(`📨 [${player.id.slice(0,6)}] Answer from: ${msg.from.slice(0,6)}`, 'success');
+      break;
+
+    case 'ice':
+      break; // skip ICE logs
+  }
+}
+
+function sendOffer(player, targetId) {
+  if (!player.ws || player.ws.readyState !== WebSocket.OPEN) return;
+  player.ws.send(JSON.stringify({
+    type: 'offer',
+    to: targetId,
+    sdp: {
+      type: 'offer',
+      sdp: `v=0\r\no=- ${Date.now()} 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n`
+    }
+  }));
+  log(`📤 [${player.id.slice(0,6)}] Sent offer → ${targetId.slice(0,6)}`, 'info');
+}
+
+function sendAnswer(player, targetId) {
+  if (!player.ws || player.ws.readyState !== WebSocket.OPEN) return;
+  player.ws.send(JSON.stringify({
+    type: 'answer',
+    to: targetId,
+    sdp: {
+      type: 'answer',
+      sdp: `v=0\r\no=- ${Date.now()} 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n`
+    }
+  }));
+  log(`📤 [${player.id.slice(0,6)}] Sent answer → ${targetId.slice(0,6)}`, 'success');
+}
+
+// ─── Simulate ─────────────────────────────────────────────
+function simulateActivity() {
+  if (simInterval) {
+    clearInterval(simInterval);
+    simInterval = null;
+    log('⏸ Simulation stopped', 'warn');
+    return;
+  }
+  log('▶ Simulation started (fake movement + chat)', 'success');
+  const chatMsgs = ['hello!', 'ai đây?', 'test', 'lag không?', 'đang combat', 'level mấy rồi?'];
+
+  simInterval = setInterval(() => {
+    globalTick++;
+    const playerList = Array.from(players.values()).filter(p => p.connected);
+
+    // Simulate random speaking (fake mic)
+    if (globalTick % 40 === 0) {
+      playerList.forEach(p => {
+        const speaking = Math.random() > 0.6;
+        setPlayerSpeaking(p.id, speaking);
+        if (speaking) log(`🎙️ [${p.id.slice(0,6)}] đang nói (simulated)`, 'mic');
+      });
+    }
+
+    // Stop speaking after 1s
+    if (globalTick % 40 === 20) {
+      playerList.forEach(p => setPlayerSpeaking(p.id, false));
+    }
+
+  }, 50); // 20fps
+}
+
+// ─── Disconnect ────────────────────────────────────────────
+function disconnectAll() {
+  for (const [, player] of players) {
+    if (player.ws) player.ws.close();
+  }
+  if (simInterval) { clearInterval(simInterval); simInterval = null; }
+  log('■ All players disconnected', 'warn');
+}
+
+// ─── Microphone Test ───────────────────────────────────────
+
+// Tạo volume bars
+(function() {
+  const container = document.getElementById('volumeBars');
+  for (let i = 0; i < 24; i++) {
+    const bar = document.createElement('div');
+    bar.className = 'v-bar';
+    bar.style.height = '4px';
+    container.appendChild(bar);
+  }
+})();
+
+async function initMic() {
+  try {
+    log('🎙️ Đang xin quyền truy cập microphone...', 'mic');
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    audioCtx  = new AudioContext();
+    const source = audioCtx.createMediaStreamSource(micStream);
+    analyser  = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    source.connect(analyser);
+
+    document.getElementById('micStatus').textContent = '✅ Microphone đang hoạt động';
+    document.getElementById('micStatus').style.color = '#4d4';
+    document.getElementById('btnMic').disabled    = true;
+    document.getElementById('btnMute').disabled   = false;
+    document.getElementById('btnStopMic').disabled = false;
+
+    log('✅ Microphone connected! Đang đọc audio stream...', 'success');
+    log('ℹ️ Trong game thật, stream này sẽ được gửi qua WebRTC Audio Track', 'info');
+
+    startVAD();
+  } catch(err) {
+    log(`❌ Mic error: ${err.message}`, 'error');
+    document.getElementById('micStatus').textContent = '❌ ' + err.message;
+    document.getElementById('micStatus').style.color = '#f44';
+  }
+}
+
+function startVAD() {
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  const bars = document.querySelectorAll('.v-bar');
+  const numBars = bars.length;
+
+  function tick() {
+    if (!analyser) return;
+    analyser.getByteFrequencyData(data);
+
+    // Chia freq data thành numBars buckets
+    const bucketSize = Math.floor(data.length / numBars);
+    for (let i = 0; i < numBars; i++) {
+      let sum = 0;
+      for (let j = 0; j < bucketSize; j++) {
+        sum += data[i * bucketSize + j];
+      }
+      const avg = sum / bucketSize;
+      const h = Math.max(2, (avg / 255) * 50);
+      bars[i].style.height = h + 'px';
+      const intensity = avg / 255;
+      if (isMuted) {
+        bars[i].style.background = 'rgba(255,100,100,0.3)';
+      } else {
+        bars[i].style.background = `rgba(${Math.floor(100 + intensity * 155)},${Math.floor(200 - intensity * 100)},255,${0.2 + intensity * 0.8})`;
+      }
+    }
+
+    // Overall volume
+    const totalAvg = data.slice(0, 64).reduce((a, b) => a + b, 0) / 64;
+    const volumePct = Math.round((totalAvg / 255) * 100);
+    document.getElementById('micLevel').textContent = isMuted
+      ? '🔇 Muted'
+      : `Volume: ${volumePct}% ${volumePct > 20 ? '🔊' : '🔈'}`;
+
+    // Simulate: khi đang nói, update all bot players coi như đang nghe
+    if (!isMuted && volumePct > 15) {
+      document.querySelectorAll('.player-card').forEach(card => {
+        card.style.borderColor = 'rgba(200,100,255,0.4)';
+      });
+    } else {
+      document.querySelectorAll('.player-card').forEach(card => {
+        if (!card.classList.contains('speaking')) card.style.borderColor = '';
+      });
+    }
+
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+function toggleMute() {
+  if (!micStream) return;
+  isMuted = !isMuted;
+  micStream.getAudioTracks().forEach(t => { t.enabled = !isMuted; });
+  const btn = document.getElementById('btnMute');
+  btn.textContent = isMuted ? '🎙️ Unmute' : '🔇 Mute';
+  btn.style.background = isMuted ? '#8a1a1a' : '#7a6a00';
+  log(isMuted ? '🔇 Muted' : '🎙️ Unmuted', 'mic');
+}
+
+function stopMic() {
+  if (micStream) {
+    micStream.getTracks().forEach(t => t.stop());
+    micStream = null;
+  }
+  if (audioCtx) { audioCtx.close(); audioCtx = null; }
+  analyser = null;
+  document.getElementById('micStatus').textContent = 'Microphone đã dừng';
+  document.getElementById('micStatus').style.color = 'rgba(255,255,255,0.4)';
+  document.getElementById('btnMic').disabled    = false;
+  document.getElementById('btnMute').disabled   = true;
+  document.getElementById('btnStopMic').disabled = true;
+
+  const bars = document.querySelectorAll('.v-bar');
+  bars.forEach(b => { b.style.height = '4px'; b.style.background = 'rgba(100,200,255,0.2)'; });
+  document.getElementById('micLevel').textContent = 'Volume: 0%';
+  log('⏹ Microphone stopped', 'warn');
+}
+
+// ─── Test REST API ─────────────────────────────────────────
+async function testRestAPI() {
+  const apiUrl = document.getElementById('serverUrl').value
+    .replace('ws://', 'http://')
+    .replace('wss://', 'https://');
+  const roomId = document.getElementById('roomId').value;
+
+  log('=== Testing REST API ===', 'warn');
+
+  // GET room
+  try {
+    const res = await fetch(`${apiUrl}/api/rooms/${roomId}`);
+    const data = await res.json();
+    log(`GET /api/rooms/${roomId} → ${JSON.stringify(data)}`, 'success');
+  } catch(e) {
+    log(`❌ GET room: ${e.message}`, 'error');
+  }
+
+  // POST room
+  try {
+    const res = await fetch(`${apiUrl}/api/rooms`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: roomId, name: 'Test Room' })
+    });
+    const data = await res.json();
+    log(`POST /api/rooms → ${JSON.stringify(data)}`, 'success');
+  } catch(e) {
+    log(`❌ POST room: ${e.message}`, 'error');
+  }
+
+  // GET mods
+  try {
+    const res = await fetch(`${apiUrl}/api/rooms/${roomId}/mods`);
+    const data = await res.json();
+    log(`GET /api/rooms/${roomId}/mods → ${JSON.stringify(data).slice(0,100)}`, 'success');
+  } catch(e) {
+    log(`❌ GET mods: ${e.message}`, 'error');
+  }
+
+  // POST mod
+  try {
+    const res = await fetch(`${apiUrl}/api/rooms/${roomId}/mods`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chunkId: '0_0', vertexIndex: 42, deltaY: -1.5, toolType: 'dig' })
+    });
+    log(`POST /api/rooms/${roomId}/mods → status ${res.status}`, res.ok ? 'success' : 'error');
+  } catch(e) {
+    log(`❌ POST mod: ${e.message}`, 'error');
+  }
+}
+</script>
+</body>
+</html>
