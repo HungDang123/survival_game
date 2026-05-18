@@ -72,11 +72,28 @@ func (s *Store) GetRoomSeed(id string) (int64, error) {
 }
 
 func (s *Store) SaveTerrainMod(mod TerrainMod) error {
-	_, err := s.db.Exec(`
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec(`
+		DELETE FROM terrain_mods
+		WHERE room_id = ? AND chunk_id = ? AND vertex_idx = ?
+	`, mod.RoomID, mod.ChunkID, mod.VertexIndex)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`
 		INSERT INTO terrain_mods (room_id, chunk_id, vertex_idx, delta_y, tool_type)
 		VALUES (?, ?, ?, ?, ?)
 	`, mod.RoomID, mod.ChunkID, mod.VertexIndex, mod.DeltaY, mod.ToolType)
-	return err
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func (s *Store) GetTerrainMods(roomID string) ([]TerrainMod, error) {
@@ -114,6 +131,15 @@ func (s *Store) UpsertPlayer(id, roomID string, x, y, z float64) error {
 			updated_at=CURRENT_TIMESTAMP
 	`, id, roomID, x, y, z)
 	return err
+}
+
+func (s *Store) GetPlayer(id string) (PlayerPosition, error) {
+	var p PlayerPosition
+	err := s.db.QueryRow(`
+		SELECT id, room_id, pos_x, pos_y, pos_z
+		FROM players WHERE id = ?
+	`, id).Scan(&p.ID, &p.RoomID, &p.X, &p.Y, &p.Z)
+	return p, err
 }
 
 func (s *Store) Close() error {

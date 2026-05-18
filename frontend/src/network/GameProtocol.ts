@@ -8,6 +8,7 @@ export const MsgType = {
   PLAYER_ACTION: 3 as const,
   CHAT_TEXT: 4 as const,
   WORLD_STATE: 5 as const,
+  PLAYER_DAMAGE: 6 as const,
 };
 
 export interface PlayerUpdateMsg {
@@ -31,7 +32,13 @@ export interface WorldStateMsg {
   mods: TerrainModification[];
 }
 
-export type GameMsg = PlayerUpdateMsg | TerrainModifyMsg | ChatTextMsg | WorldStateMsg;
+export interface PlayerDamageMsg {
+  t: typeof MsgType.PLAYER_DAMAGE;
+  target: string;
+  amount: number;
+}
+
+export type GameMsg = PlayerUpdateMsg | TerrainModifyMsg | ChatTextMsg | WorldStateMsg | PlayerDamageMsg;
 
 export function encodeMsg(msg: GameMsg): ArrayBuffer {
   return encode(msg).buffer as ArrayBuffer;

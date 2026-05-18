@@ -1,8 +1,11 @@
 package api
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
+	"os"
+	"strconv"
 
 	"survival-game/internal/room"
 	"survival-game/internal/signaling"
@@ -19,13 +22,15 @@ var upgrader = websocket.Upgrader{
 }
 
 type Handler struct {
-	hub     *signaling.Hub
-	rooms   *room.Manager
-	store   *world.Store
+	hub            *signaling.Hub
+	rooms          *room.Manager
+	store          *world.Store
+	maxRoomPlayers int
 }
 
 func New(hub *signaling.Hub, rooms *room.Manager, store *world.Store) *Handler {
-	return &Handler{hub: hub, rooms: rooms, store: store}
+	maxRoomPlayers, _ := strconv.Atoi(os.Getenv("MAX_ROOM_PLAYERS"))
+	return &Handler{hub: hub, rooms: rooms, store: store, maxRoomPlayers: maxRoomPlayers}
 }
 
 func (h *Handler) Router() http.Handler {
@@ -36,6 +41,9 @@ func (h *Handler) Router() http.Handler {
 	r.Post("/api/rooms", h.createRoom)
 	r.Get("/api/rooms/{roomId}/mods", h.getTerrainMods)
 	r.Post("/api/rooms/{roomId}/mods", h.saveTerrainMod)
+	r.Get("/api/players/{playerId}", h.getPlayer)
+	r.Post("/api/rooms/{roomId}/players/{playerId}", h.savePlayer)
+	r.Get("/health", h.health)
 
 	return r
 }
@@ -45,6 +53,10 @@ func (h *Handler) handleWS(w http.ResponseWriter, r *http.Request) {
 	playerID := r.URL.Query().Get("player")
 	if roomID == "" || playerID == "" {
 		http.Error(w, "room and player required", http.StatusBadRequest)
+		return
+	}
+	if h.maxRoomPlayers > 0 && h.hub.RoomSize(roomID) >= h.maxRoomPlayers {
+		http.Error(w, "room full", http.StatusTooManyRequests)
 		return
 	}
 
@@ -59,9 +71,8 @@ func (h *Handler) handleWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := signaling.NewClient(playerID, roomID, h.hub, conn)
+	client := signaling.NewClient(playerID, roomID, rm.Seed, h.hub, conn)
 	h.hub.Register(client)
-	h.hub.SendRoomState(client, rm.Seed)
 
 	go client.WritePump()
 	go client.ReadPump()
@@ -133,6 +144,43 @@ func (h *Handler) saveTerrainMod(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
+}
+
+func (h *Handler) getPlayer(w http.ResponseWriter, r *http.Request) {
+	playerID := chi.URLParam(r, "playerId")
+	player, err := h.store.GetPlayer(playerID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "player not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "db error", http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, player)
+}
+
+func (h *Handler) savePlayer(w http.ResponseWriter, r *http.Request) {
+	roomID := chi.URLParam(r, "roomId")
+	playerID := chi.URLParam(r, "playerId")
+	var body struct {
+		X float64 `json:"x"`
+		Y float64 `json:"y"`
+		Z float64 `json:"z"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+	if err := h.store.UpsertPlayer(playerID, roomID, body.X, body.Y, body.Z); err != nil {
+		http.Error(w, "db error", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) health(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, map[string]string{"status": "ok"})
 }
 
 func writeJSON(w http.ResponseWriter, v interface{}) {

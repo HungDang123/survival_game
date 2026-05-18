@@ -1,0 +1,46 @@
+/AGENTS.md
+/TODO.md
+
+# Local environment
+.env
+.env.*
+!.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Frontend build/dependencies
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.vite/
+
+# Backend runtime data/build output
+backend/*.db
+backend/*.sqlite
+backend/*.sqlite3
+backend/*.db-*
+backend/*.sqlite-*
+backend/*.sqlite3-*
+backend/bin/
+backend/tmp/
+backend/coverage.out
+backend/*.test
+backend/*.exe
+*.go.[0-9]*
+
+# Logs/cache
+*.log
+logs/
+.cache/
+tmp/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

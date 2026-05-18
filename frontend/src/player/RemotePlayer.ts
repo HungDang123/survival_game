@@ -1,14 +1,19 @@
 import * as THREE from 'three';
 import type { PlayerState } from './LocalPlayer';
 
-const SKIN   = new THREE.MeshLambertMaterial({ color: 0xffc87a });
-const HAIR   = new THREE.MeshLambertMaterial({ color: 0x2a1a08 });
-const SHIRT  = new THREE.MeshLambertMaterial({ color: 0x2a5fa8 });
-const ARMOR  = new THREE.MeshLambertMaterial({ color: 0x6a7e8e });
-const PANTS  = new THREE.MeshLambertMaterial({ color: 0x2c3a52 });
-const BOOTS  = new THREE.MeshLambertMaterial({ color: 0x1a0e06 });
-const EYE    = new THREE.MeshLambertMaterial({ color: 0x111111 });
-const BELT   = new THREE.MeshLambertMaterial({ color: 0x1a1208 });
+// PBR materials: roughness/metalness tuned per material type
+// skin=0.65, cloth=0.88, leather=0.80, metal=0.22, hair=0.90
+const std = (color: number, roughness: number, metalness = 0.0) =>
+  new THREE.MeshStandardMaterial({ color, roughness, metalness, envMapIntensity: 0.7 });
+
+const SKIN  = std(0xffc87a, 0.65);
+const HAIR  = std(0x2a1a08, 0.92);
+const SHIRT = std(0x2a5fa8, 0.88);
+const ARMOR = std(0x6a7e8e, 0.55, 0.35);   // armour plate — moderate metalness
+const PANTS = std(0x2c3a52, 0.88);
+const BOOTS = std(0x1a0e06, 0.82);
+const EYE   = std(0x111111, 1.0);
+const BELT  = std(0x1a1208, 0.80);
 
 function box(w: number, h: number, d: number, mat: THREE.Material): THREE.Mesh {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
@@ -197,6 +202,29 @@ export class RemotePlayer {
     this.nameLabel.style.boxShadow = speaking
       ? '0 0 8px rgba(68,220,68,0.4)'
       : '';
+  }
+
+  getPosition(): THREE.Vector3 {
+    return this.mesh.position.clone().add(new THREE.Vector3(0, 1.82, 0));
+  }
+
+  showHit() {
+    this.mesh.traverse((obj) => {
+      const mesh = obj as THREE.Mesh;
+      if (!mesh.material) return;
+      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      for (const mat of mats) {
+        if ('emissive' in mat) {
+          const material = mat as THREE.MeshStandardMaterial;
+          material.emissive.setHex(0xff2222);
+          material.emissiveIntensity = 0.8;
+          setTimeout(() => {
+            material.emissive.setHex(0x000000);
+            material.emissiveIntensity = 0;
+          }, 120);
+        }
+      }
+    });
   }
 
   dispose(scene: THREE.Scene) {

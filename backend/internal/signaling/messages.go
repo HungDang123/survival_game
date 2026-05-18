@@ -12,7 +12,6 @@ const (
 	MsgOffer     MsgType = "offer"
 	MsgAnswer    MsgType = "answer"
 	MsgICE       MsgType = "ice"
-	MsgWorldSeed MsgType = "world_seed"
 )
 
 type BaseMsg struct {

@@ -4,6 +4,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
+	"sync"
+	"time"
 
 	"survival-game/internal/api"
 	"survival-game/internal/room"
@@ -39,10 +42,18 @@ func main() {
 	handler := api.New(hub, roomMgr, store)
 
 	r := chi.NewRouter()
-	r.Use(middleware.Logger)
+	if os.Getenv("LOG_LEVEL") != "off" {
+		r.Use(middleware.Logger)
+	}
 	r.Use(middleware.Recoverer)
+	r.Use(authMiddleware(os.Getenv("AUTH_TOKEN")))
+	r.Use(rateLimitMiddleware(120, time.Minute))
+	origins := []string{"*"}
+	if corsOrigins := os.Getenv("CORS_ALLOWED_ORIGINS"); corsOrigins != "" {
+		origins = strings.Split(corsOrigins, ",")
+	}
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins:   origins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
 		AllowCredentials: false,
@@ -51,7 +62,61 @@ func main() {
 	r.Mount("/", handler.Router())
 
 	log.Printf("Server starting on :%s", port)
-	if err := http.ListenAndServe(":"+port, r); err != nil {
+	certFile := os.Getenv("TLS_CERT_FILE")
+	keyFile := os.Getenv("TLS_KEY_FILE")
+	if certFile != "" && keyFile != "" {
+		err = http.ListenAndServeTLS(":"+port, certFile, keyFile, r)
+	} else {
+		err = http.ListenAndServe(":"+port, r)
+	}
+	if err != nil {
 		log.Fatalf("server error: %v", err)
+	}
+}
+
+func authMiddleware(token string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		if token == "" {
+			return next
+		}
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Authorization") != "Bearer "+token && r.URL.Query().Get("token") != token {
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+func rateLimitMiddleware(limit int, window time.Duration) func(http.Handler) http.Handler {
+	type bucket struct {
+		count int
+		reset time.Time
+	}
+	var mu sync.Mutex
+	buckets := map[string]bucket{}
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ip := strings.Split(r.RemoteAddr, ":")[0]
+			now := time.Now()
+
+			mu.Lock()
+			b := buckets[ip]
+			if now.After(b.reset) {
+				b = bucket{reset: now.Add(window)}
+			}
+			b.count++
+			buckets[ip] = b
+			allowed := b.count <= limit
+			mu.Unlock()
+
+			if !allowed {
+				http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
 	}
 }

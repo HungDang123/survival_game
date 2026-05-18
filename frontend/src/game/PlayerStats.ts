@@ -58,13 +58,15 @@ export class PlayerStats extends EventTarget {
     return { value: Math.floor(base * (isCrit ? 2 : 1)), isCrit };
   }
 
-  update(delta: number) {
-    if (this.hp < this.maxHp) {
+  update(delta: number, canRegen = true) {
+    if (this.hp < this.maxHp && canRegen) {
       this.hpRegenTimer += delta;
       if (this.hpRegenTimer >= this.hpRegenInterval) {
         this.hpRegenTimer = 0;
         this.heal(this.hpRegenAmount);
       }
+    } else if (!canRegen) {
+      this.hpRegenTimer = 0;
     }
   }
 

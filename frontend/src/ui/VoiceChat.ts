@@ -239,4 +239,12 @@ export class VoiceChat {
   getStream(): MediaStream | null {
     return this.stream;
   }
+
+  dispose() {
+    this.stream?.getTracks().forEach(track => track.stop());
+    this.audioContext?.close().catch(() => {});
+    this.speakerIndicators.forEach(el => el.remove());
+    this.speakerIndicators.clear();
+    this.container.remove();
+  }
 }

@@ -6,6 +6,7 @@ export interface InventoryItem {
   icon: string;
   tool?: ToolType;
   count?: number;
+  equip?: 'weapon' | 'armor';
 }
 
 export class Inventory {
@@ -47,6 +48,60 @@ export class Inventory {
 
   getActiveTool(): ToolType {
     return this.getActiveItem()?.tool ?? 'hand';
+  }
+
+  addItem(item: InventoryItem, count = 1): boolean {
+    const stack = this.slots.find(slot => slot?.id === item.id && !slot.tool);
+    if (stack) {
+      stack.count = (stack.count ?? 1) + count;
+      this.dispatchChange();
+      return true;
+    }
+
+    const emptyIndex = this.slots.findIndex(slot => slot === null);
+    if (emptyIndex === -1) return false;
+
+    this.slots[emptyIndex] = { ...item, count };
+    this.dispatchChange();
+    return true;
+  }
+
+  consumeActive(count = 1): InventoryItem | null {
+    const item = this.slots[this.activeSlot];
+    if (!item || item.tool) return null;
+
+    const remaining = (item.count ?? 1) - count;
+    if (remaining > 0) {
+      item.count = remaining;
+    } else {
+      this.slots[this.activeSlot] = null;
+    }
+    this.dispatchChange();
+    return item;
+  }
+
+  hasItem(id: string, count = 1): boolean {
+    return this.slots.reduce((sum, item) => sum + (item?.id === id ? item.count ?? 1 : 0), 0) >= count;
+  }
+
+  removeItem(id: string, count = 1): boolean {
+    if (!this.hasItem(id, count)) return false;
+
+    let remaining = count;
+    for (let i = 0; i < this.slots.length && remaining > 0; i++) {
+      const item = this.slots[i];
+      if (item?.id !== id) continue;
+
+      const itemCount = item.count ?? 1;
+      const used = Math.min(itemCount, remaining);
+      remaining -= used;
+      const nextCount = itemCount - used;
+      if (nextCount > 0) item.count = nextCount;
+      else this.slots[i] = null;
+    }
+
+    this.dispatchChange();
+    return true;
   }
 
   getSlots(): (InventoryItem | null)[] {

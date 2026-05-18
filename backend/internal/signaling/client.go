@@ -19,16 +19,18 @@ const (
 type Client struct {
 	ID     string
 	RoomID string
+	Seed   int64
 	hub    *Hub
 	conn   *websocket.Conn
 	send   chan []byte
 	mu     sync.Mutex
 }
 
-func NewClient(id, roomID string, hub *Hub, conn *websocket.Conn) *Client {
+func NewClient(id, roomID string, seed int64, hub *Hub, conn *websocket.Conn) *Client {
 	return &Client{
 		ID:     id,
 		RoomID: roomID,
+		Seed:   seed,
 		hub:    hub,
 		conn:   conn,
 		send:   make(chan []byte, 256),

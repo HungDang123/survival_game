@@ -1,17 +1,18 @@
 export type SignalingMsg =
-  | { type: 'room_state'; players: string[] }
+  | { type: 'room_state'; players: string[]; seed: number }
   | { type: 'peer_joined'; peerId: string }
   | { type: 'peer_left'; peerId: string }
   | { type: 'offer'; from: string; sdp: RTCSessionDescriptionInit }
   | { type: 'answer'; from: string; sdp: RTCSessionDescriptionInit }
-  | { type: 'ice'; from: string; candidate: RTCIceCandidateInit }
-  | { type: 'world_seed'; seed: number };
+  | { type: 'ice'; from: string; candidate: RTCIceCandidateInit };
 
 export class SignalingClient extends EventTarget {
   private ws!: WebSocket;
   private roomId: string;
   private playerId: string;
   private url: string;
+  private reconnectAttempts = 0;
+  private manualClose = false;
 
   constructor(url: string, roomId: string, playerId: string) {
     super();
@@ -22,10 +23,18 @@ export class SignalingClient extends EventTarget {
 
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const wsUrl = `${this.url}/ws?room=${this.roomId}&player=${this.playerId}`;
+      this.manualClose = false;
+      const ws = new URL(`${this.url}/ws`);
+      ws.searchParams.set('room', this.roomId);
+      ws.searchParams.set('player', this.playerId);
+      if (import.meta.env.VITE_AUTH_TOKEN) ws.searchParams.set('token', import.meta.env.VITE_AUTH_TOKEN);
+      const wsUrl = ws.toString();
       this.ws = new WebSocket(wsUrl);
 
-      this.ws.onopen = () => resolve();
+      this.ws.onopen = () => {
+        this.reconnectAttempts = 0;
+        resolve();
+      };
       this.ws.onerror = (e) => reject(e);
 
       this.ws.onmessage = (event) => {
@@ -39,8 +48,17 @@ export class SignalingClient extends EventTarget {
 
       this.ws.onclose = () => {
         this.dispatchEvent(new CustomEvent('disconnected'));
+        if (!this.manualClose) this.scheduleReconnect();
       };
     });
+  }
+
+  private scheduleReconnect() {
+    this.reconnectAttempts++;
+    const delay = Math.min(10000, 500 * 2 ** Math.min(this.reconnectAttempts, 5));
+    window.setTimeout(() => {
+      this.connect().catch(() => this.scheduleReconnect());
+    }, delay);
   }
 
   send(msg: object) {
@@ -62,6 +80,7 @@ export class SignalingClient extends EventTarget {
   }
 
   disconnect() {
+    this.manualClose = true;
     this.ws?.close();
   }
 }

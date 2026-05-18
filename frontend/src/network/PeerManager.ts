@@ -7,6 +7,14 @@ const ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun1.l.google.com:19302' },
 ];
 
+if (import.meta.env.VITE_TURN_URL) {
+  ICE_SERVERS.push({
+    urls: import.meta.env.VITE_TURN_URL,
+    username: import.meta.env.VITE_TURN_USERNAME,
+    credential: import.meta.env.VITE_TURN_CREDENTIAL,
+  });
+}
+
 interface PeerEntry {
   connection: RTCPeerConnection;
   dataChannel: RTCDataChannel | null;
@@ -15,16 +23,21 @@ interface PeerEntry {
 
 export type GameMsgHandler = (peerId: string, msg: GameMsg) => void;
 export type PeerEventHandler = (peerId: string) => void;
+export type SpeakingHandler = (peerId: string, speaking: boolean) => void;
+
+const SPEAKING_THRESHOLD = 18;  // average frequency amplitude 0-255
 
 export class PeerManager {
   private peers = new Map<string, PeerEntry>();
   private signaling: SignalingClient;
   private localId: string;
   private localAudioStream: MediaStream | null = null;
+  private audioCtx: AudioContext | null = null;
 
   onMessage: GameMsgHandler = () => {};
   onPeerConnected: PeerEventHandler = () => {};
   onPeerDisconnected: PeerEventHandler = () => {};
+  onSpeaking: SpeakingHandler = () => {};
 
   constructor(signaling: SignalingClient, localId: string) {
     this.signaling = signaling;
@@ -40,6 +53,14 @@ export class PeerManager {
   }
 
   private setupSignalingEvents() {
+    this.signaling.addEventListener('room_state', async (e: Event) => {
+      const { players } = (e as CustomEvent).detail as { players: string[] };
+      for (const peerId of players) {
+        if (peerId === this.localId || this.peers.has(peerId)) continue;
+        await this.createOffer(peerId);
+      }
+    });
+
     this.signaling.addEventListener('peer_joined', async (e: Event) => {
       const { peerId } = (e as CustomEvent).detail;
       if (peerId === this.localId) return;
@@ -82,13 +103,39 @@ export class PeerManager {
 
     pc.ontrack = (e) => {
       const entry = this.peers.get(peerId);
-      if (entry) {
-        entry.audioStream = e.streams[0];
-        const audio = document.createElement('audio');
-        audio.srcObject = e.streams[0];
-        audio.autoplay = true;
-        audio.id = `audio-${peerId}`;
-        document.body.appendChild(audio);
+      if (!entry) return;
+      entry.audioStream = e.streams[0];
+
+      const audio = document.createElement('audio');
+      audio.srcObject = e.streams[0];
+      audio.autoplay = true;
+      audio.id = `audio-${peerId}`;
+      document.body.appendChild(audio);
+
+      // Build analyser for this peer so we can detect when they're speaking
+      try {
+        if (!this.audioCtx) this.audioCtx = new AudioContext();
+        const src      = this.audioCtx.createMediaStreamSource(e.streams[0]);
+        const analyser = this.audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        src.connect(analyser);
+        const data = new Uint8Array(analyser.frequencyBinCount);
+        let prevSpeaking = false;
+
+        const tick = () => {
+          if (!this.peers.has(peerId)) return;  // peer disconnected
+          analyser.getByteFrequencyData(data);
+          const avg = data.slice(0, 32).reduce((a, b) => a + b, 0) / 32;
+          const isSpeaking = avg > SPEAKING_THRESHOLD;
+          if (isSpeaking !== prevSpeaking) {
+            prevSpeaking = isSpeaking;
+            this.onSpeaking(peerId, isSpeaking);
+          }
+          requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      } catch {
+        // Web Audio unavailable — speaking indicators remain static
       }
     };
 

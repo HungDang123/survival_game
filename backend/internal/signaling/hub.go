@@ -49,6 +49,12 @@ func (h *Hub) addClient(c *Client) {
 	}
 
 	existingPlayers := h.playerList(c.RoomID)
+	c.Send(RoomStateMsg{
+		Type:    MsgRoomState,
+		Players: existingPlayers,
+		Seed:    c.Seed,
+	})
+
 	h.rooms[c.RoomID][c.ID] = c
 
 	for _, existing := range h.rooms[c.RoomID] {
@@ -58,8 +64,6 @@ func (h *Hub) addClient(c *Client) {
 	}
 
 	log.Printf("player %s joined room %s (%d players)", c.ID, c.RoomID, len(h.rooms[c.RoomID]))
-
-	_ = existingPlayers
 }
 
 func (h *Hub) removeClient(c *Client) {
@@ -109,6 +113,12 @@ func (h *Hub) Relay(roomID, targetID string, msg RelayMsg) {
 		return
 	}
 	target.Send(msg)
+}
+
+func (h *Hub) RoomSize(roomID string) int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return len(h.rooms[roomID])
 }
 
 func (h *Hub) playerList(roomID string) []string {
